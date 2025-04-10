@@ -43,7 +43,7 @@ const Stamp = mongoose.model('Stamp', {
   country: String,
   value: String,
   category: String,
-  image: String,  // Will hold Cloudinary image URL
+  image: String,  // Store Cloudinary URL
 });
 
 // Test route
@@ -55,7 +55,7 @@ app.get('/', (req, res) => {
 app.post('/api/stamps/add', upload.single('image'), async (req, res) => {
   try {
     const { title, year, description, country, value, category } = req.body;
-    const image = req.file ? req.file.path : '';  // Cloudinary URL will be in req.file.path
+    const imageUrl = req.file ? req.file.path : '';  // Cloudinary URL in req.file.path
 
     const newStamp = new Stamp({
       title,
@@ -64,7 +64,7 @@ app.post('/api/stamps/add', upload.single('image'), async (req, res) => {
       country,
       value,
       category,
-      image,  // Save Cloudinary URL
+      image: imageUrl,  // Save Cloudinary URL
     });
 
     await newStamp.save();
@@ -77,6 +77,7 @@ app.post('/api/stamps/add', upload.single('image'), async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
 
 
 
