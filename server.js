@@ -4,7 +4,6 @@ const cors = require('cors');
 const { v2: cloudinary } = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-require('dotenv').config();
 
 const app = express();
 
@@ -12,11 +11,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Cloudinary config
+// Cloudinary config with direct API keys (no .env file)
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'stampello',
-  api_key: process.env.CLOUDINARY_API_KEY || '332231186378573',
-  api_secret: process.env.CLOUDINARY_API_SECRET || '_apLJCLcVNocDCvoHTwZiccZ0HU',
+  cloud_name: 'stampello', // Your Cloudinary cloud name
+  api_key: '332231186378573', // Your Cloudinary API key
+  api_secret: '_apLJCLcVNocDCvoHTwZiccZ0HU', // Your Cloudinary API secret
 });
 
 // Multer + Cloudinary storage
