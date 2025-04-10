@@ -4,7 +4,7 @@ const cors = require('cors');
 const { v2: cloudinary } = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-require('dotenv').config(); // Optional for local dev
+require('dotenv').config();
 
 const app = express();
 
@@ -43,7 +43,7 @@ const Stamp = mongoose.model('Stamp', {
   country: String,
   value: String,
   category: String,
-  image: String, // Will hold Cloudinary image URL
+  image: String,  // Will hold Cloudinary image URL
 });
 
 // Test route
@@ -51,24 +51,11 @@ app.get('/', (req, res) => {
   res.send('🚀 Backend is running');
 });
 
-// Get all stamps (optional category filter)
-app.get('/api/stamps', async (req, res) => {
-  const { category } = req.query;
-  try {
-    const filters = category ? { category } : {};
-    const stamps = await Stamp.find(filters);
-    res.json(stamps);
-  } catch (err) {
-    console.error('Error:', err.message);
-    res.status(500).json({ error: 'Failed to fetch stamps' });
-  }
-});
-
 // Add new stamp with Cloudinary image upload
 app.post('/api/stamps/add', upload.single('image'), async (req, res) => {
   try {
     const { title, year, description, country, value, category } = req.body;
-    const image = req.file?.path || ''; // Cloudinary URL
+    const image = req.file ? req.file.path : '';  // Cloudinary URL will be in req.file.path
 
     const newStamp = new Stamp({
       title,
@@ -77,7 +64,7 @@ app.post('/api/stamps/add', upload.single('image'), async (req, res) => {
       country,
       value,
       category,
-      image,
+      image,  // Save Cloudinary URL
     });
 
     await newStamp.save();
@@ -88,10 +75,9 @@ app.post('/api/stamps/add', upload.single('image'), async (req, res) => {
   }
 });
 
-// No need to serve static uploads anymore since we use Cloudinary
-
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
 
 
 
