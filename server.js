@@ -1,48 +1,49 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const { v2: cloudinary } = require('cloudinary');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
-// require('dotenv').config();
+require('dotenv').config(); // Optional for local dev
 
 const app = express();
-
-// Ensure 'uploads' folder exists
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Set up multer storage configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
+// Cloudinary config
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'stampello',
+  api_key: process.env.CLOUDINARY_API_KEY || '332231186378573',
+  api_secret: process.env.CLOUDINARY_API_SECRET || '_apLJCLcVNocDCvoHTwZiccZ0HU',
+});
+
+// Multer + Cloudinary storage
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'stamps',
+    allowed_formats: ['jpg', 'jpeg', 'png'],
+    transformation: [{ width: 800, height: 600, crop: 'limit' }],
   },
 });
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 // MongoDB Connection
 mongoose.connect('mongodb+srv://stampello:STMPDBlog2025@cluster0.bx9fhwy.mongodb.net/stampello?retryWrites=true&w=majority&appName=Cluster0')
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => console.error('❌ MongoDB connection error:', err));
 
-// Define Stamp model with category field
+// Define Stamp model
 const Stamp = mongoose.model('Stamp', {
   title: String,
   year: String,
   description: String,
   country: String,
   value: String,
-  category: String,  // Added category field
-  image: String,
+  category: String,
+  image: String, // Will hold Cloudinary image URL
 });
 
 // Test route
@@ -50,12 +51,12 @@ app.get('/', (req, res) => {
   res.send('🚀 Backend is running');
 });
 
-// API route to get all stamps (optional category filter)
+// Get all stamps (optional category filter)
 app.get('/api/stamps', async (req, res) => {
-  const { category } = req.query;  // Get category filter from query params
+  const { category } = req.query;
   try {
-    const filters = category ? { category } : {};  // Apply filter if category is provided
-    const stamps = await Stamp.find(filters);  // Find stamps based on the filter
+    const filters = category ? { category } : {};
+    const stamps = await Stamp.find(filters);
     res.json(stamps);
   } catch (err) {
     console.error('Error:', err.message);
@@ -63,11 +64,11 @@ app.get('/api/stamps', async (req, res) => {
   }
 });
 
-// API route to add a new stamp (Handle POST request with file upload)
+// Add new stamp with Cloudinary image upload
 app.post('/api/stamps/add', upload.single('image'), async (req, res) => {
   try {
     const { title, year, description, country, value, category } = req.body;
-    const image = req.file ? `/uploads/${req.file.filename}` : '';  // Save image path if uploaded
+    const image = req.file?.path || ''; // Cloudinary URL
 
     const newStamp = new Stamp({
       title,
@@ -75,7 +76,7 @@ app.post('/api/stamps/add', upload.single('image'), async (req, res) => {
       description,
       country,
       value,
-      category,  // Save category field
+      category,
       image,
     });
 
@@ -87,9 +88,106 @@ app.post('/api/stamps/add', upload.single('image'), async (req, res) => {
   }
 });
 
-// Serve uploaded images
-app.use('/uploads', express.static('uploads'));
+// No need to serve static uploads anymore since we use Cloudinary
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+
+
+
+// const express = require('express');
+// const mongoose = require('mongoose');
+// const cors = require('cors');
+// const multer = require('multer');
+// const fs = require('fs');
+// const path = require('path');
+// // require('dotenv').config();
+
+// const app = express();
+
+// // Ensure 'uploads' folder exists
+// const uploadDir = path.join(__dirname, 'uploads');
+// if (!fs.existsSync(uploadDir)) {
+//   fs.mkdirSync(uploadDir);
+// }
+
+// // Middleware
+// app.use(cors());
+// app.use(express.json());
+
+// // Set up multer storage configuration
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, 'uploads/');
+//   },
+//   filename: (req, file, cb) => {
+//     cb(null, Date.now() + '-' + file.originalname);
+//   },
+// });
+// const upload = multer({ storage: storage });
+
+// // MongoDB Connection
+// mongoose.connect('mongodb+srv://stampello:STMPDBlog2025@cluster0.bx9fhwy.mongodb.net/stampello?retryWrites=true&w=majority&appName=Cluster0')
+//   .then(() => console.log('✅ MongoDB connected'))
+//   .catch((err) => console.error('❌ MongoDB connection error:', err));
+
+// // Define Stamp model with category field
+// const Stamp = mongoose.model('Stamp', {
+//   title: String,
+//   year: String,
+//   description: String,
+//   country: String,
+//   value: String,
+//   category: String,  // Added category field
+//   image: String,
+// });
+
+// // Test route
+// app.get('/', (req, res) => {
+//   res.send('🚀 Backend is running');
+// });
+
+// // API route to get all stamps (optional category filter)
+// app.get('/api/stamps', async (req, res) => {
+//   const { category } = req.query;  // Get category filter from query params
+//   try {
+//     const filters = category ? { category } : {};  // Apply filter if category is provided
+//     const stamps = await Stamp.find(filters);  // Find stamps based on the filter
+//     res.json(stamps);
+//   } catch (err) {
+//     console.error('Error:', err.message);
+//     res.status(500).json({ error: 'Failed to fetch stamps' });
+//   }
+// });
+
+// // API route to add a new stamp (Handle POST request with file upload)
+// app.post('/api/stamps/add', upload.single('image'), async (req, res) => {
+//   try {
+//     const { title, year, description, country, value, category } = req.body;
+//     const image = req.file ? `/uploads/${req.file.filename}` : '';  // Save image path if uploaded
+
+//     const newStamp = new Stamp({
+//       title,
+//       year,
+//       description,
+//       country,
+//       value,
+//       category,  // Save category field
+//       image,
+//     });
+
+//     await newStamp.save();
+//     res.status(201).json({ message: 'Stamp added successfully', stamp: newStamp });
+//   } catch (err) {
+//     console.error('Error:', err.message);
+//     res.status(500).json({ error: 'Failed to add stamp' });
+//   }
+// });
+
+// // Serve uploaded images
+// app.use('/uploads', express.static('uploads'));
+
+// const PORT = process.env.PORT || 5000;
+// app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 
