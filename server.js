@@ -4,7 +4,7 @@ const cors = require("cors");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
-require("dotenv").config(); // Load environment variables from .env
+require("dotenv").config();
 
 const app = express();
 
@@ -53,9 +53,13 @@ const Stamp = mongoose.model("Stamp", {
 });
 
 // Admin Schema & Model (for admindb collection)
-const Admin = mongoose.model("Admin", new mongoose.Schema({
-  password: String,
-}), 'admindb'); // explicitly set collection name
+const Admin = mongoose.model(
+  "Admin",
+  new mongoose.Schema({
+    password: String,
+  }),
+  "admindb"
+);
 
 // Test Route
 app.get("/", (req, res) => {
@@ -117,7 +121,7 @@ app.put("/api/stamps/:id", async (req, res) => {
 // Get Admin Password from DB
 app.get("/api/admin/password", async (req, res) => {
   try {
-    const admin = await Admin.findOne(); // get first document
+    const admin = await Admin.findOne();
     if (!admin) return res.status(404).json({ error: "Admin not found" });
     res.json({ password: admin.password });
   } catch (err) {
