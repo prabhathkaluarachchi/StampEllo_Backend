@@ -26,7 +26,7 @@ app.use(express.json());
 // Multer Storage Setup
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/"); 
+    cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
     const fileName = file.originalname.replace(/\s+/g, "-");
@@ -35,195 +35,104 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// MongoDB Connection (from .env)
+// MongoDB Connection
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// Admin Schema (for storing password as plain text)
-const Admin = mongoose.model("Admin", {
-  password: String, // Store password as plain text
+// Stamp Schema & Model
+const Stamp = mongoose.model("Stamp", {
+  title: String,
+  year: String,
+  description: String,
+  country: String,
+  value: String,
+  category: String,
+  image: String,
 });
 
-// Route to Register Admin (store password as plain text)
-app.post("/api/admin/register", async (req, res) => {
+// Admin Schema & Model (for admindb collection)
+const Admin = mongoose.model("Admin", new mongoose.Schema({
+  password: String,
+}), 'admindb'); // explicitly set collection name
+
+// Test Route
+app.get("/", (req, res) => {
+  res.send("🚀 Backend is running");
+});
+
+// GET Stamps (optional filter by category)
+app.get("/api/stamps", async (req, res) => {
+  const { category } = req.query;
   try {
-    const { password } = req.body;
-
-    // Store password as plain text
-    const newAdmin = new Admin({ password });
-    await newAdmin.save();
-
-    res.status(201).json({ message: "Admin registered successfully" });
+    const stamps = await Stamp.find(category ? { category } : {});
+    res.json(stamps);
   } catch (err) {
-    console.error("Error registering admin:", err.message);
-    res.status(500).json({ error: "Failed to register admin" });
+    console.error("Error:", err.message);
+    res.status(500).json({ error: "Failed to fetch stamps" });
   }
 });
 
-// Route to Validate Admin Login (check password from DB)
-app.post("/api/admin/login", async (req, res) => {
+// ADD New Stamp
+app.post("/api/stamps/add", upload.single("image"), async (req, res) => {
   try {
-    const { password } = req.body;
+    const { title, year, description, country, value, category } = req.body;
+    const image = req.file ? `/uploads/${req.file.filename}` : "";
 
-    // Find the admin in the database
-    const admin = await Admin.findOne();
-    if (!admin) {
-      return res.status(404).json({ error: "Admin not found" });
-    }
+    const newStamp = new Stamp({ title, year, description, country, value, category, image });
+    await newStamp.save();
 
-    // Compare entered password with the password in the database
-    if (password === admin.password) {
-      res.json({ message: "Login Successful!" });
-    } else {
-      res.status(400).json({ error: "Incorrect password" });
-    }
+    res.status(201).json({ message: "Stamp added successfully", stamp: newStamp });
   } catch (err) {
-    console.error("Error logging in:", err.message);
-    res.status(500).json({ error: "Login failed" });
+    console.error("Error:", err.message);
+    res.status(500).json({ error: "Failed to add stamp" });
   }
 });
+
+// DELETE Stamp by ID
+app.delete("/api/stamps/:id", async (req, res) => {
+  try {
+    const deleted = await Stamp.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Stamp not found" });
+    res.json({ message: "Stamp deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Delete failed" });
+  }
+});
+
+// UPDATE Stamp by ID (excluding image)
+app.put("/api/stamps/:id", async (req, res) => {
+  try {
+    const updated = await Stamp.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updated) return res.status(404).json({ error: "Stamp not found" });
+    res.json({ message: "Stamp updated successfully", stamp: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Update failed" });
+  }
+});
+
+// Get Admin Password from DB
+app.get("/api/admin/password", async (req, res) => {
+  try {
+    const admin = await Admin.findOne(); // get first document
+    if (!admin) return res.status(404).json({ error: "Admin not found" });
+    res.json({ password: admin.password });
+  } catch (err) {
+    console.error("Error fetching admin password:", err.message);
+    res.status(500).json({ error: "Failed to fetch admin password" });
+  }
+});
+
+// Serve Uploaded Images
+app.use("/uploads", express.static("uploads"));
 
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// const express = require("express");
-// const mongoose = require("mongoose");
-// const cors = require("cors");
-// const multer = require("multer");
-// const fs = require("fs");
-// const path = require("path");
-// require("dotenv").config(); // Load environment variables from .env
-
-// const app = express();
-
-// // Ensure 'uploads' folder exists
-// const uploadDir = path.join(__dirname, "uploads");
-// if (!fs.existsSync(uploadDir)) {
-//   fs.mkdirSync(uploadDir);
-// }
-
-// // Middleware
-// const corsOptions = {
-//   origin: "*",
-//   methods: ["GET", "POST", "PUT", "DELETE"],
-//   allowedHeaders: ["Content-Type"],
-// };
-// app.use(cors(corsOptions));
-// app.use(express.json());
-
-// // Multer Storage Setup
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     cb(null, "uploads/");
-//   },
-//   filename: (req, file, cb) => {
-//     const fileName = file.originalname.replace(/\s+/g, "-");
-//     cb(null, fileName);
-//   },
-// });
-// const upload = multer({ storage });
-
-// // MongoDB Connection (from .env)
-// mongoose
-//   .connect(process.env.MONGO_URI)
-//   .then(() => console.log("✅ MongoDB connected"))
-//   .catch((err) => console.error("❌ MongoDB connection error:", err));
-
-// // Stamp Schema
-// const Stamp = mongoose.model("Stamp", {
-//   title: String,
-//   year: String,
-//   description: String,
-//   country: String,
-//   value: String,
-//   category: String,
-//   image: String,
-// });
-
-// // Test Route
-// app.get("/", (req, res) => {
-//   res.send("🚀 Backend is running");
-// });
-
-// // GET Stamps (filter by category)
-// app.get("/api/stamps", async (req, res) => {
-//   const { category } = req.query;
-//   try {
-//     const stamps = await Stamp.find(category ? { category } : {});
-//     res.json(stamps);
-//   } catch (err) {
-//     console.error("Error:", err.message);
-//     res.status(500).json({ error: "Failed to fetch stamps" });
-//   }
-// });
-
-// // ADD New Stamp
-// app.post("/api/stamps/add", upload.single("image"), async (req, res) => {
-//   try {
-//     const { title, year, description, country, value, category } = req.body;
-//     const image = req.file ? `/uploads/${req.file.filename}` : "";
-
-//     const newStamp = new Stamp({ title, year, description, country, value, category, image });
-//     await newStamp.save();
-
-//     res.status(201).json({ message: "Stamp added successfully", stamp: newStamp });
-//   } catch (err) {
-//     console.error("Error:", err.message);
-//     res.status(500).json({ error: "Failed to add stamp" });
-//   }
-// });
-
-// // DELETE Stamp by ID
-// app.delete("/api/stamps/:id", async (req, res) => {
-//   try {
-//     const deleted = await Stamp.findByIdAndDelete(req.params.id);
-//     if (!deleted) return res.status(404).json({ error: "Stamp not found" });
-//     res.json({ message: "Stamp deleted successfully" });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: "Delete failed" });
-//   }
-// });
-
-// // UPDATE Stamp by ID (excluding image)
-// app.put("/api/stamps/:id", async (req, res) => {
-//   try {
-//     const updated = await Stamp.findByIdAndUpdate(req.params.id, req.body, { new: true });
-//     if (!updated) return res.status(404).json({ error: "Stamp not found" });
-//     res.json({ message: "Stamp updated successfully", stamp: updated });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: "Update failed" });
-//   }
-// });
-
-// // Serve Uploaded Images
-// app.use("/uploads", express.static("uploads"));
-
-// // Start Server
-// const PORT = process.env.PORT || 5000;
-// app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 
 
 
