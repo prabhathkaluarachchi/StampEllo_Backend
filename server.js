@@ -4,6 +4,7 @@ const cors = require("cors");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
+require("dotenv").config(); // Load environment variables from .env
 
 const app = express();
 
@@ -14,14 +15,12 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Middleware
-// app.use(cors());
 const corsOptions = {
   origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type"],
 };
 app.use(cors(corsOptions));
-
 app.use(express.json());
 
 // Multer Storage Setup
@@ -36,9 +35,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// MongoDB Connection
+// MongoDB Connection (from .env)
 mongoose
-  .connect("mongodb+srv://stampello:STMPDBlog2025@cluster0.bx9fhwy.mongodb.net/stampello?retryWrites=true&w=majority&appName=Cluster0")
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
@@ -101,9 +100,7 @@ app.delete("/api/stamps/:id", async (req, res) => {
 // UPDATE Stamp by ID (excluding image)
 app.put("/api/stamps/:id", async (req, res) => {
   try {
-    const updated = await Stamp.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    const updated = await Stamp.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!updated) return res.status(404).json({ error: "Stamp not found" });
     res.json({ message: "Stamp updated successfully", stamp: updated });
   } catch (err) {
@@ -118,6 +115,7 @@ app.use("/uploads", express.static("uploads"));
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
 
 
 
