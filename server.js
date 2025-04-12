@@ -53,13 +53,10 @@ const Stamp = mongoose.model("Stamp", {
 });
 
 // Admin Schema & Model (for admindb collection)
-const Admin = mongoose.model(
-  "Admin",
-  new mongoose.Schema({
-    password: String,
-  }),
-  "admindb"
-);
+const Admin = mongoose.model("Admin", new mongoose.Schema({
+  password: String,
+}), 'admin'); // explicitly using 'admindb' as the collection name
+
 
 // Test Route
 app.get("/", (req, res) => {
@@ -118,10 +115,10 @@ app.put("/api/stamps/:id", async (req, res) => {
   }
 });
 
-// Get Admin Password from DB
+// GET Admin Password
 app.get("/api/admin/password", async (req, res) => {
   try {
-    const admin = await Admin.findOne();
+    const admin = await Admin.findOne(); // gets the first document
     if (!admin) return res.status(404).json({ error: "Admin not found" });
     res.json({ password: admin.password });
   } catch (err) {
@@ -129,6 +126,7 @@ app.get("/api/admin/password", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch admin password" });
   }
 });
+
 
 // Serve Uploaded Images
 app.use("/uploads", express.static("uploads"));
